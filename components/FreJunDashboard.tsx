@@ -666,6 +666,46 @@ function AnalyticsOverviewPanel({ makeApiCall }: { makeApiCall: any }) {
       let page = 1;
       let hasNext = true;
       
+      const getCallSeconds = (call: any) => {
+        if (call.total_minutes !== undefined && call.total_minutes !== null) {
+          return Number(call.total_minutes) * 60;
+        }
+        if (call['Total Minutes'] !== undefined && call['Total Minutes'] !== null) {
+          return Number(call['Total Minutes']) * 60;
+        }
+        if (call.call_duration !== undefined && call.call_duration !== null) {
+          const str = String(call.call_duration).toLowerCase();
+          const parts = str.split(':');
+          if (parts.length === 3) {
+            return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+          } else if (parts.length === 2) {
+            return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+          } else if (!isNaN(Number(str))) {
+            const num = Number(str);
+            return (str.includes('.') && num < 60) ? num * 60 : num;
+          }
+        }
+        const durationValue = call.duration || call.billsec || call.Duration || call['Duration'] || call.total_duration || '0';
+        const str = String(durationValue).toLowerCase();
+        let m = 0, s = 0;
+        const mMatch = str.match(/(\d+)\s*m/);
+        const sMatch = str.match(/(\d+)\s*s/);
+        if (mMatch) m = parseInt(mMatch[1], 10);
+        if (sMatch) s = parseInt(sMatch[1], 10);
+        if (!mMatch && !sMatch) {
+          const parts = str.split(':');
+          if (parts.length === 3) {
+            return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+          } else if (parts.length === 2) {
+            return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+          } else if (!isNaN(Number(str))) {
+            const num = Number(str);
+            return (str.includes('.') && num < 60) ? num * 60 : num;
+          }
+        }
+        return m * 60 + s;
+      };
+
       const extractCalls = (res: any) => {
         const resData = res?.data;
         if (Array.isArray(resData)) return resData;
@@ -713,9 +753,9 @@ function AnalyticsOverviewPanel({ makeApiCall }: { makeApiCall: any }) {
         
         // Filter for answered calls only
         const status = (call.status || '').toLowerCase();
-        const duration = parseInt(call.call_duration || call['Total Minutes'] || call.total_minutes || call.duration || '0', 10);
+        const durationSeconds = getCallSeconds(call);
         
-        const isAnswered = status === 'answered' || status === 'ongoing..' || duration > 0;
+        const isAnswered = status === 'answered' || status === 'ongoing..' || durationSeconds > 0;
         if (!isAnswered) return false;
 
         const startTimeStr = call.call_start_time || call['Start Time'] || call.start_time || call.created_at || call.date || call.timestamp || call.call_time || call.call_date || call.startTime || call.createdAt || call.time || call.Date || call['Date'] || call.start;
@@ -763,34 +803,7 @@ function AnalyticsOverviewPanel({ makeApiCall }: { makeApiCall: any }) {
         const date = new Date(startTimeStr).toISOString().split('T')[0];
         
         // Parse duration
-        const durationValue = call.call_duration || call['Total Minutes'] || call.total_minutes || call.duration || call.billsec || call.Duration || call['Duration'] || call.total_duration || '0';
-        let seconds = 0;
-        
-        if (typeof durationValue === 'number') {
-          seconds = durationValue; 
-        } else {
-          const str = String(durationValue).toLowerCase();
-          let m = 0, s = 0;
-          const mMatch = str.match(/(\d+)\s*m/);
-          const sMatch = str.match(/(\d+)\s*s/);
-          
-          if (mMatch) m = parseInt(mMatch[1], 10);
-          if (sMatch) s = parseInt(sMatch[1], 10);
-          
-          if (!mMatch && !sMatch) {
-            // Check for HH:MM:SS or MM:SS format
-            const parts = str.split(':');
-            if (parts.length === 3) {
-              seconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
-            } else if (parts.length === 2) {
-              seconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-            } else if (!isNaN(Number(str))) {
-              seconds = Number(str);
-            }
-          } else {
-            seconds = m * 60 + s;
-          }
-        }
+        const seconds = getCallSeconds(call);
         
         // Categorize
         let category = '> 90s';
