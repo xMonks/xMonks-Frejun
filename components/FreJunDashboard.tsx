@@ -591,7 +591,54 @@ function AnalyticsOverviewPanel({ makeApiCall }: { makeApiCall: any }) {
   const downloadAsImage = async (ref: React.RefObject<HTMLDivElement | null>, filename: string) => {
     if (!ref.current) return;
     try {
-      const dataUrl = await htmlToImage.toPng(ref.current, { backgroundColor: '#ffffff', pixelRatio: 2 });
+      const element = ref.current;
+      
+      // Find the inner table to ensure we capture its full width if it's overflowing
+      const innerTable = element.querySelector('table');
+      const tableWidth = innerTable ? innerTable.scrollWidth + 48 : 0; // 48px accounts for the p-6 padding
+      
+      // Force a desktop-like width for the image capture so tables don't get squished on mobile
+      const targetWidth = Math.max(element.offsetWidth, tableWidth, 1024);
+
+      // Save original styles to restore later
+      const originalWidth = element.style.width;
+      const originalMaxWidth = element.style.maxWidth;
+      const originalOverflows: string[] = [];
+      
+      const overflowDivs = element.querySelectorAll('.overflow-x-auto');
+      overflowDivs.forEach((div: any, i) => {
+        originalOverflows[i] = div.style.overflow;
+        div.style.overflow = 'visible';
+      });
+
+      // Apply temporary styles for capture
+      element.style.width = `${targetWidth}px`;
+      element.style.maxWidth = 'none';
+
+      // Wait a tick for the browser to apply the styles and recalculate layout
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const targetHeight = element.scrollHeight;
+      
+      const dataUrl = await htmlToImage.toPng(element, { 
+        backgroundColor: '#ffffff', 
+        pixelRatio: 2,
+        width: targetWidth,
+        height: targetHeight,
+        style: {
+          width: `${targetWidth}px`,
+          maxWidth: 'none',
+          margin: '0'
+        }
+      });
+
+      // Restore original styles
+      element.style.width = originalWidth;
+      element.style.maxWidth = originalMaxWidth;
+      overflowDivs.forEach((div: any, i) => {
+        div.style.overflow = originalOverflows[i];
+      });
+
       const link = document.createElement('a');
       link.href = dataUrl;
       link.download = `${filename}.png`;
