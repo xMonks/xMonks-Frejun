@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Phone, PhoneCall, List, Users, Send, RefreshCw, AlertCircle, Terminal, BookOpen, UserCog, BarChart3, Tags, Hash } from 'lucide-react';
+import { Phone, PhoneCall, List, Users, Send, RefreshCw, AlertCircle, Terminal, BookOpen, UserCog, BarChart3, Tags, Hash, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import * as htmlToImage from 'html-to-image';
 
 export default function FreJunDashboard({ 
   authType, 
@@ -584,6 +585,22 @@ function AnalyticsOverviewPanel({ makeApiCall }: { makeApiCall: any }) {
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
 
+  const agentPerformanceRef = useRef<HTMLDivElement>(null);
+  const durationSummaryRef = useRef<HTMLDivElement>(null);
+
+  const downloadAsImage = async (ref: React.RefObject<HTMLDivElement | null>, filename: string) => {
+    if (!ref.current) return;
+    try {
+      const dataUrl = await htmlToImage.toPng(ref.current, { backgroundColor: '#ffffff', pixelRatio: 2 });
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `${filename}.png`;
+      link.click();
+    } catch (err) {
+      console.error('Failed to save image:', err);
+    }
+  };
+
   const fetchAnalyticsInternal = useCallback(async (start: string, end: string) => {
     if (!start || !end) return;
     
@@ -909,8 +926,18 @@ function AnalyticsOverviewPanel({ makeApiCall }: { makeApiCall: any }) {
             </div>
           </div>
           
-          <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-            <h3 className="text-lg font-bold text-neutral-900 mb-4">Agent Performance Details</h3>
+          <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm" ref={agentPerformanceRef}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-neutral-900">Agent Performance Details</h3>
+              <button 
+                onClick={() => downloadAsImage(agentPerformanceRef, 'agent-performance-details')}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-md transition-colors"
+                title="Save as Image"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Save as Image
+              </button>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left border-collapse">
                 <thead className="bg-neutral-50 text-neutral-700">
@@ -948,8 +975,18 @@ function AnalyticsOverviewPanel({ makeApiCall }: { makeApiCall: any }) {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm mt-8">
-            <h3 className="text-lg font-bold text-neutral-900 mb-4">Duration Summary (Pivot Table)</h3>
+          <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm mt-8" ref={durationSummaryRef}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-neutral-900">Duration Summary (Pivot Table)</h3>
+              <button 
+                onClick={() => downloadAsImage(durationSummaryRef, 'duration-summary')}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-md transition-colors"
+                title="Save as Image"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Save as Image
+              </button>
+            </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left border-collapse">
