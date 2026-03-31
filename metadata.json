@@ -1,0 +1,5 @@
+{
+  "name": "FreJun API Explorer",
+  "description": "An application to explore and test FreJun APIs using OAuth 2.0 and API Key authentication.",
+  "requestFramePermissions": []
+}
